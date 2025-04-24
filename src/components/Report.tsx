@@ -1,10 +1,18 @@
-import { FormData } from "../types/FormData";
+"use client";
+
+import type React from "react";
+
+import { useState } from "react";
+import type { FormData } from "../types/FormData";
+import { jsPDF } from "jspdf";
 
 interface ReporteProps {
   data: FormData;
 }
 
 const Reporte: React.FC<ReporteProps> = ({ data }) => {
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
   const formatDate = (date?: string) => {
     if (!date) return "no especificado";
     const [year, month, day] = date.split("-");
@@ -37,6 +45,122 @@ const Reporte: React.FC<ReporteProps> = ({ data }) => {
     if (data["horario-medicacion"] === "si")
       return "El paciente tiene medicación prescrita y la tomó en horario.";
     return "El paciente tiene medicación prescrita y la tomó, pero no en horario.";
+  };
+
+  const generatePDF = () => {
+    setIsGeneratingPDF(true);
+    try {
+      const doc = new jsPDF();
+
+      // Título
+      doc.setFontSize(18);
+      doc.text("Reporte de Visita", 105, 20, { align: "center" });
+
+      // Contenido
+      doc.setFontSize(12);
+
+      let y = 40;
+      const lineHeight = 7;
+
+      // Información general
+      doc.text(`Fecha de visita: ${formatDate(data.fecha)}`, 20, y);
+      y += lineHeight;
+      doc.text(`Hora de llegada: ${formatTime(data.hora)} hs`, 20, y);
+      y += lineHeight;
+      doc.text(
+        `Estado de conciencia: ${
+          data["estado-conciencia"] || "no especificado"
+        }`,
+        20,
+        y
+      );
+      y += lineHeight;
+      doc.text(
+        `Acompañado de: ${data["estado-paciente"] || "no especificado"}`,
+        20,
+        y
+      );
+      y += lineHeight * 1.5;
+
+      // Estado físico
+      doc.text("Estado físico:", 20, y);
+      y += lineHeight;
+      doc.text(`- Posición: ${data.posicion || "no especificado"}`, 25, y);
+      y += lineHeight;
+      doc.text(`- Higiene: ${data.higiene || "no especificadas"}`, 25, y);
+      y += lineHeight;
+      doc.text(
+        `- Estado de ánimo: ${data["estado-animo"] || "no especificado"}`,
+        25,
+        y
+      );
+      y += lineHeight * 1.5;
+
+      // Medicación
+      doc.text("Medicación:", 20, y);
+      y += lineHeight;
+      doc.text(`- ${medicacionText()}`, 25, y);
+      y += lineHeight * 1.5;
+
+      // Actividades
+      doc.text("Actividades realizadas:", 20, y);
+      y += lineHeight;
+      doc.text(
+        `- Actividad física: ${data["actividad-fisica"] || "no especificado"}`,
+        25,
+        y
+      );
+      y += lineHeight;
+      doc.text(
+        `- Hidratación: ${data.hidratacion || "no especificado"}`,
+        25,
+        y
+      );
+      y += lineHeight;
+      doc.text(`- Comida: ${data.comida || "no especificado"}`, 25, y);
+      y += lineHeight;
+      doc.text(`- Catarsis: ${data.catarsis || "no especificado"}`, 25, y);
+      y += lineHeight;
+      doc.text(`- Diuresis: ${data.diuresis || "no especificado"}`, 25, y);
+      y += lineHeight * 1.5;
+
+      // Horas
+      doc.text(`Total de horas: ${calculateHours()} hs`, 20, y);
+      y += lineHeight;
+      doc.text(
+        `Salida: ${formatDate(data["fecha-salida"])} a las ${formatTime(
+          data["hora-salida"]
+        )} hs`,
+        20,
+        y
+      );
+      y += lineHeight * 1.5;
+
+      // Observaciones
+      if (data.observaciones) {
+        doc.text("Observaciones:", 20, y);
+        y += lineHeight;
+        doc.text(data.observaciones, 25, y, { maxWidth: 160 });
+        y += lineHeight * 2;
+      }
+
+      // Pautas de alarma
+      if (data["pautas-alarma"]) {
+        doc.setTextColor(255, 0, 0);
+        doc.text("PAUTAS DE ALARMA:", 20, y);
+        y += lineHeight;
+        doc.text(data["pautas-alarma"], 25, y, { maxWidth: 160 });
+        doc.setTextColor(0, 0, 0);
+      }
+
+      // Guardar PDF
+      doc.save(`reporte_visita_${formatDate(data.fecha)}.pdf`);
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      alert("Error al generar el PDF. Por favor, intenta de nuevo.");
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   return (
@@ -84,8 +208,12 @@ const Reporte: React.FC<ReporteProps> = ({ data }) => {
           </p>
         </div>
       )}
-      <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md">
-        Descargar Reporte
+      <button
+        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:bg-blue-300"
+        onClick={generatePDF}
+        disabled={isGeneratingPDF}
+      >
+        {isGeneratingPDF ? "Generando PDF..." : "Descargar Reporte (PDF)"}
       </button>
     </div>
   );

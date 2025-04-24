@@ -1,17 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useForm, type SubmitHandler } from "react-hook-form";
 import DateTimeInput from "../../components/DateTimeInput";
 import RadioGroup from "../../components/RadioGroup";
 import TextArea from "../../components/TextArea";
-import Reporte from "../../components/Report"; // Ensure the file exists at this path or adjust the path accordingly
+import Reporte from "../../components/Report";
 import type { FormData } from "../../types/FormData";
 
 export default function FormularioCuidadores() {
-  const [formData, setFormData] = useState<FormData>({});
-  const [medicacion, setMedicacion] = useState<string>("");
-  const [tomoMedicacion, setTomoMedicacion] = useState<string>("");
-  const [reporte, setReporte] = useState<FormData | null>(null);
   const [mostrarReporte, setMostrarReporte] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -23,51 +20,59 @@ export default function FormularioCuidadores() {
     .toISOString()
     .split("T")[0];
 
-  // Manejo de cambios en el formulario
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<FormData>({
+    defaultValues: {
+      medicacion: "",
+      "tomo-medicacion": "",
+      "horario-medicacion": "",
+    },
+  });
+
+  // Observar valores para lógica condicional
+  const medicacion = watch("medicacion");
+  const tomoMedicacion = watch("tomo-medicacion");
 
   // Validación de fechas
-  const validateDates = () => {
+  const validateDates = (data: FormData) => {
     if (
-      !formData.fecha ||
-      !formData.hora ||
-      !formData["fecha-salida"] ||
-      !formData["hora-salida"]
+      !data.fecha ||
+      !data.hora ||
+      !data["fecha-salida"] ||
+      !data["hora-salida"]
     ) {
       return "Por favor, completa todos los campos de fecha y hora.";
     }
-    const ingreso = new Date(`${formData.fecha}T${formData.hora}`);
-    const salida = new Date(
-      `${formData["fecha-salida"]}T${formData["hora-salida"]}`
-    );
+
+    const ingreso = new Date(`${data.fecha}T${data.hora}`);
+    const salida = new Date(`${data["fecha-salida"]}T${data["hora-salida"]}`);
+
     if (isNaN(ingreso.getTime()) || isNaN(salida.getTime())) {
       return "Fechas u horas inválidas.";
     }
+
     if (salida <= ingreso) {
       return "La fecha y hora de salida deben ser posteriores a la de ingreso.";
     }
+
     return null;
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const validationError = validateDates();
+  const onSubmit: SubmitHandler<FormData> = (data) => {
+    const validationError = validateDates(data);
     if (validationError) {
       setError(validationError);
       setSuccess(null);
       return;
     }
+
     setError(null);
     try {
-      const form = e.currentTarget;
-      const data = Object.fromEntries(new FormData(form).entries()) as FormData;
       console.log("Datos del formulario:", data);
-      setReporte(data);
       setMostrarReporte(true);
       setSuccess("Reporte generado exitosamente");
       setTimeout(() => setSuccess(null), 3000);
@@ -79,13 +84,26 @@ export default function FormularioCuidadores() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[var(--background)] text-[var(--foreground)] font-[family-name:var(--font-geist-sans)]">
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-lg p-4">
+        <h1 className="text-2xl font-bold mb-6 text-center">
+          Formulario de Cuidadores
+        </h1>
+
         <form
           className="bg-[var(--background)] shadow-md rounded-lg p-6"
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
         >
-          {error && <p className="text-red-500 mb-4">{error}</p>}
-          {success && <p className="text-green-500 mb-4">{success}</p>}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+              {success}
+            </div>
+          )}
 
           {/* Día y horario de llegada */}
           <div className="mb-6">
@@ -97,17 +115,19 @@ export default function FormularioCuidadores() {
                 label="Fecha"
                 name="fecha"
                 type="date"
-                value={formData.fecha || ""}
-                onChange={handleChange}
+                register={register}
+                required
                 min={minDate}
                 max={maxDate}
+                error={errors.fecha?.message}
               />
               <DateTimeInput
                 label="Hora"
                 name="hora"
                 type="time"
-                value={formData.hora || ""}
-                onChange={handleChange}
+                register={register}
+                required
+                error={errors.hora?.message}
               />
             </div>
           </div>
@@ -120,32 +140,22 @@ export default function FormularioCuidadores() {
               { value: "durmiendo", label: "Durmiendo" },
               { value: "soporoso", label: "Soporoso" },
             ]}
-            value={formData["estado-conciencia"] || ""}
-            onChange={(value: string) =>
-              setFormData((prev: FormData) => ({
-                ...prev,
-                "estado-conciencia": value,
-              }))
-            }
+            register={register}
+            required
+            error={errors["estado-conciencia"]?.message}
           />
 
           <RadioGroup
             label="Estado del/la paciente a la llegada"
             name="estado-paciente"
-            options={
-              [
-                { value: "solo", label: "Solo" },
-                { value: "familiar", label: "Familiar" },
-                { value: "cuidador", label: "Cuidador" },
-              ] as { value: string; label: string }[]
-            }
-            value={formData["estado-paciente"] || ""}
-            onChange={(value: string) =>
-              setFormData((prev: FormData) => ({
-                ...prev,
-                "estado-paciente": value,
-              }))
-            }
+            options={[
+              { value: "solo", label: "Solo" },
+              { value: "familiar", label: "Familiar" },
+              { value: "cuidador", label: "Cuidador" },
+            ]}
+            register={register}
+            required
+            error={errors["estado-paciente"]?.message}
           />
 
           {/* Estado físico */}
@@ -155,110 +165,81 @@ export default function FormularioCuidadores() {
             </label>
             <p className="text-sm mb-2">¿Estaba acostado o levantado?</p>
             <RadioGroup
-              label="Posición del paciente"
+              label=""
               name="posicion"
-              options={
-                [
-                  { value: "acostado", label: "Acostado" },
-                  { value: "levantado", label: "Levantado" },
-                ] as { value: string; label: string }[]
-              }
-              value={formData.posicion || ""}
-              onChange={(value: string) =>
-                setFormData((prev: FormData) => ({ ...prev, posicion: value }))
-              }
+              options={[
+                { value: "acostado", label: "Acostado" },
+                { value: "levantado", label: "Levantado" },
+              ]}
+              register={register}
+              required
+              error={errors.posicion?.message}
             />
             <p className="text-sm mb-2">Condiciones de higiene</p>
             <RadioGroup
-              label="Condiciones de higiene"
+              label=""
               name="higiene"
-              options={
-                [
-                  { value: "buenas", label: "Buenas" },
-                  { value: "regulares", label: "Regulares" },
-                  { value: "malas", label: "Malas" },
-                ] as { value: string; label: string }[]
-              }
-              value={formData.higiene || ""}
-              onChange={(value: string) =>
-                setFormData((prev: FormData) => ({ ...prev, higiene: value }))
-              }
+              options={[
+                { value: "buenas", label: "Buenas" },
+                { value: "regulares", label: "Regulares" },
+                { value: "malas", label: "Malas" },
+              ]}
+              register={register}
+              required
+              error={errors.higiene?.message}
             />
           </div>
 
           <RadioGroup
             label="Estado de ánimo general"
             name="estado-animo"
-            options={
-              [
-                { value: "bueno", label: "Bueno" },
-                { value: "regular", label: "Regular" },
-                { value: "malo", label: "Malo" },
-              ] as { value: string; label: string }[]
-            }
-            value={formData["estado-animo"] || ""}
-            onChange={(value: string) =>
-              setFormData((prev: FormData) => ({
-                ...prev,
-                "estado-animo": value,
-              }))
-            }
+            options={[
+              { value: "bueno", label: "Bueno" },
+              { value: "regular", label: "Regular" },
+              { value: "malo", label: "Malo" },
+            ]}
+            register={register}
+            required
+            error={errors["estado-animo"]?.message}
           />
 
           <RadioGroup
             label="¿Hay medicación para recordarle?"
             name="medicacion"
-            options={
-              [
-                { value: "si", label: "Sí" },
-                { value: "no", label: "No" },
-              ] as { value: string; label: string }[]
-            }
-            value={medicacion}
-            onChange={(value: string) => {
-              setMedicacion(value);
-              setFormData((prev: FormData) => ({ ...prev, medicacion: value }));
-            }}
+            options={[
+              { value: "si", label: "Sí" },
+              { value: "no", label: "No" },
+            ]}
+            register={register}
+            required
+            error={errors.medicacion?.message}
           />
 
           {medicacion === "si" && (
             <RadioGroup
               label="¿Tomó la medicación?"
               name="tomo-medicacion"
-              options={
-                [
-                  { value: "si", label: "Sí" },
-                  { value: "no", label: "No" },
-                ] as { value: string; label: string }[]
-              }
-              value={tomoMedicacion}
-              onChange={(value: string) => {
-                setTomoMedicacion(value);
-                setFormData((prev: FormData) => ({
-                  ...prev,
-                  "tomo-medicacion": value,
-                }));
-              }}
+              options={[
+                { value: "si", label: "Sí" },
+                { value: "no", label: "No" },
+              ]}
+              register={register}
+              required={medicacion === "si"}
+              error={errors["tomo-medicacion"]?.message}
             />
           )}
 
-          {tomoMedicacion === "si" && (
+          {medicacion === "si" && tomoMedicacion === "si" && (
             <RadioGroup
               label="¿La tomó en horario?"
               name="horario-medicacion"
-              options={
-                [
-                  { value: "si", label: "Sí" },
-                  { value: "no", label: "No" },
-                ] as { value: string; label: string }[]
-              }
-              value={formData["horario-medicacion"] || ""}
-              onChange={(value: string) =>
-                setFormData((prev: FormData) => ({
-                  ...prev,
-                  "horario-medicacion": value,
-                }))
-              }
+              options={[
+                { value: "si", label: "Sí" },
+                { value: "no", label: "No" },
+              ]}
+              register={register}
+              required={medicacion === "si" && tomoMedicacion === "si"}
+              error={errors["horario-medicacion"]?.message}
             />
           )}
 
@@ -271,101 +252,71 @@ export default function FormularioCuidadores() {
               <div>
                 <p className="text-sm mb-2">¿Realizó actividad física?</p>
                 <RadioGroup
-                  label="Actividad física"
+                  label=""
                   name="actividad-fisica"
-                  options={
-                    [
-                      { value: "si", label: "Sí" },
-                      { value: "no", label: "No" },
-                    ] as { value: string; label: string }[]
-                  }
-                  value={formData["actividad-fisica"] || ""}
-                  onChange={(value: string) =>
-                    setFormData((prev: FormData) => ({
-                      ...prev,
-                      "actividad-fisica": value,
-                    }))
-                  }
+                  options={[
+                    { value: "si", label: "Sí" },
+                    { value: "no", label: "No" },
+                  ]}
+                  register={register}
+                  required
+                  error={errors["actividad-fisica"]?.message}
                 />
               </div>
               <div>
                 <p className="text-sm mb-2">¿Se hidrató adecuadamente?</p>
                 <RadioGroup
-                  label="Hidratación"
+                  label=""
                   name="hidratacion"
-                  options={
-                    [
-                      { value: "si", label: "Sí" },
-                      { value: "no", label: "No" },
-                    ] as { value: string; label: string }[]
-                  }
-                  value={formData.hidratacion || ""}
-                  onChange={(value: string) =>
-                    setFormData((prev: FormData) => ({
-                      ...prev,
-                      hidratacion: value,
-                    }))
-                  }
+                  options={[
+                    { value: "si", label: "Sí" },
+                    { value: "no", label: "No" },
+                  ]}
+                  register={register}
+                  required
+                  error={errors.hidratacion?.message}
                 />
               </div>
               <div>
                 <p className="text-sm mb-2">¿Comió?</p>
                 <RadioGroup
-                  label="Alimentación"
+                  label=""
                   name="comida"
-                  options={
-                    [
-                      { value: "si", label: "Sí" },
-                      { value: "no", label: "No" },
-                    ] as { value: string; label: string }[]
-                  }
-                  value={formData.comida || ""}
-                  onChange={(value: string) =>
-                    setFormData((prev: FormData) => ({
-                      ...prev,
-                      comida: value,
-                    }))
-                  }
+                  options={[
+                    { value: "si", label: "Sí" },
+                    { value: "no", label: "No" },
+                  ]}
+                  register={register}
+                  required
+                  error={errors.comida?.message}
                 />
               </div>
               <div>
                 <p className="text-sm mb-2">¿Tuvo catarsis?</p>
                 <RadioGroup
-                  label="Catarsis"
+                  label=""
                   name="catarsis"
-                  options={
-                    [
-                      { value: "positiva", label: "Positiva" },
-                      { value: "negativa", label: "Negativa" },
-                    ] as { value: string; label: string }[]
-                  }
-                  value={formData.catarsis || ""}
-                  onChange={(value: string) =>
-                    setFormData((prev: FormData) => ({
-                      ...prev,
-                      catarsis: value,
-                    }))
-                  }
+                  options={[
+                    { value: "positiva", label: "Positiva" },
+                    { value: "negativa", label: "Negativa" },
+                  ]}
+                  register={register}
+                  required
+                  error={errors.catarsis?.message}
                 />
               </div>
               <div>
                 <p className="text-sm mb-2">¿Tuvo diuresis?</p>
                 <RadioGroup
-                  label="Diuresis"
+                  label=""
                   name="diuresis"
-                  options={
-                    [
-                      { value: "positiva", label: "Positiva" },
-                      { value: "negativa", label: "Negativa" },
-                    ] as { value: string; label: string }[]
-                  }
-                  value={formData.diuresis || ""}
-                  onChange={(value: string) =>
-                    setFormData((prev: FormData) => ({
-                      ...prev,
-                      diuresis: value,
-                    }))
-                  }
+                  options={[
+                    { value: "positiva", label: "Positiva" },
+                    { value: "negativa", label: "Negativa" },
+                  ]}
+                  register={register}
+                  required
+                  error={errors.diuresis?.message}
                 />
               </div>
             </div>
@@ -375,18 +326,18 @@ export default function FormularioCuidadores() {
           <TextArea
             label="Observaciones"
             name="observaciones"
-            value={formData.observaciones || ""}
-            onChange={handleChange}
+            register={register}
             placeholder="Escribe cualquier observación relevante sobre el paciente..."
+            error={errors.observaciones?.message}
           />
 
           {/* Pautas de alarma */}
           <TextArea
             label="Pautas de alarma"
             name="pautas-alarma"
-            value={formData["pautas-alarma"] || ""}
-            onChange={handleChange}
+            register={register}
             placeholder="Escribe las pautas de alarma a tener en cuenta..."
+            error={errors["pautas-alarma"]?.message}
           />
 
           {/* Horario de salida */}
@@ -399,17 +350,19 @@ export default function FormularioCuidadores() {
                 label="Fecha"
                 name="fecha-salida"
                 type="date"
-                value={formData["fecha-salida"] || ""}
-                onChange={handleChange}
+                register={register}
+                required
                 min={minDate}
                 max={maxDate}
+                error={errors["fecha-salida"]?.message}
               />
               <DateTimeInput
                 label="Hora"
                 name="hora-salida"
                 type="time"
-                value={formData["hora-salida"] || ""}
-                onChange={handleChange}
+                register={register}
+                required
+                error={errors["hora-salida"]?.message}
               />
             </div>
           </div>
@@ -425,7 +378,7 @@ export default function FormularioCuidadores() {
           </div>
         </form>
 
-        {mostrarReporte && reporte && <Reporte data={reporte} />}
+        {mostrarReporte && <Reporte data={watch()} />}
       </div>
     </div>
   );

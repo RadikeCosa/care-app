@@ -18,4 +18,5 @@ export interface FormData {
   "pautas-alarma"?: string;
   "fecha-salida"?: string;
   "hora-salida"?: string;
+  [key: string]: string | undefined;
 }
