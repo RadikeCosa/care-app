@@ -16,7 +16,7 @@ export default function FormularioCuidadores() {
   // Restricciones de fecha
   const today = new Date();
   const maxDate = today.toISOString().split("T")[0];
-  const minDate = new Date(today.setDate(today.getDate() - 7))
+  const minDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
 
