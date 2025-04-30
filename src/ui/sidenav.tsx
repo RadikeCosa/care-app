@@ -3,7 +3,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon, ClipboardIcon } from "@heroicons/react/24/outline";
+import {
+  HomeIcon,
+  ClipboardIcon,
+  HeartIcon,
+} from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
 const links = [
@@ -12,7 +16,7 @@ const links = [
   {
     name: "Form RSV",
     href: "/vital-signs",
-    icon: ClipboardIcon,
+    icon: HeartIcon,
   },
 ];
 
