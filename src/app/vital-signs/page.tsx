@@ -1,12 +1,10 @@
-import TempInput from "@/components/TempInput";
+import VitalSignsForm from "./VitalSignsForm";
 
 export default function VitalSigns() {
   return (
-    <section>
-      <h1 className="text-3xl font-bold mb-4">Signos Vitales</h1>
-      <form action="">
-        <TempInput />
-      </form>
-    </section>
+    <main>
+      <h1 className="text-3xl font-bold mb-4">Registro de Signos Vitales</h1>
+      <VitalSignsForm />
+    </main>
   );
 }
