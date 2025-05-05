@@ -24,9 +24,9 @@ export default function TemperatureInput({
         min="35"
         max="42"
         id="temperature"
-        placeholder="Ej: 36.5"
+        placeholder="36.5"
         {...register("temperature", { valueAsNumber: true })}
-        className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 rounded-md text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+        className="w-24 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 rounded-md text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
       />
       {error && <span className="text-red-500 text-sm">{error.message}</span>}
     </div>
